@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#070b18">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Cacingg Gila</title>
+<link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud" hidden>
+  <div id="stats"></div>
+  <div id="fx"></div>
+  <div id="tb"><button id="bPause" aria-label="Pause">⏸</button><button id="bMenu" aria-label="Kembali ke menu">⌂</button></div>
+  <div id="zm"><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button></div>
+  <div id="jb" hidden><i id="jk"></i></div>
+</div>
+
+<main id="menu" class="scr">
+  <h1>🐛 Cacingg Gila</h1>
+  <input id="name" maxlength="12" placeholder="Nama pemain" autocomplete="off" autocapitalize="words">
+  <button id="bPlay" class="big">MAIN</button>
+  <button data-go="skin">SKIN</button>
+  <button data-go="set">PENGATURAN</button>
+  <button data-go="adm">ADMIN PANEL</button>
+  <button data-go="help">CARA BERMAIN</button>
+</main>
+
+<main id="skin" class="scr" hidden>
+  <h2>Skin</h2>
+  <canvas id="pv" width="260" height="90"></canvas>
+  <div id="sk"></div>
+  <div class="row">
+    <label>Warna 1 <input type="color" id="c1"></label>
+    <label>Warna 2 <input type="color" id="c2"></label>
+    <select id="pt"><option value="0">Polos</option><option value="1">Garis</option><option value="2">Titik</option></select>
+  </div>
+  <div class="row">
+    <label class="btn">Upload dari galeri<input type="file" id="up" accept="image/png,image/jpeg,image/webp" hidden></label>
+    <button id="skDel">Hapus gambar</button>
+  </div>
+  <p id="skMsg"></p>
+  <button data-go="back">KEMBALI</button>
+</main>
+
+<main id="set" class="scr" hidden>
+  <h2>Pengaturan</h2>
+  <div id="setF"></div>
+  <button data-go="back">KEMBALI</button>
+</main>
+
+<main id="adm" class="scr" hidden>
+  <h2>Admin Panel</h2>
+  <pre id="dash"></pre>
+  <div id="admF"></div>
+  <textarea id="js" rows="4" placeholder="JSON konfigurasi (untuk impor)"></textarea>
+  <div class="row"><button id="exp">EKSPOR</button><button id="imp">IMPOR</button><button id="rst">RESET</button></div>
+  <p id="admMsg"></p>
+  <button data-go="back">KEMBALI</button>
+</main>
+
+<main id="help" class="scr" hidden>
+  <h2>Cara bermain</h2>
+  <div class="txt">
+    <p><b>Gerak:</b> sentuh dan geser jempol di layar; joystick muncul di titik sentuhan. Di komputer: gerakkan mouse, atau tombol ← → (A/D).</p>
+    <p>Makan titik warna untuk tumbuh. Kepala yang menabrak badan cacing lain atau dinding kalah. Adu kepala: yang lebih pendek kalah.</p>
+    <p><b>Item</b> (dimakan dengan kepala, aktif 50 detik, tanpa cooldown):<br>
+    ⚡ <b>SPEED</b> — lebih cepat.<br>
+    🍏 <b>PENGGANDA</b> — nilai makanan ×2 / ×5 / ×10 (diatur di Admin Panel).<br>
+    ↪ <b>BELOK TAJAM</b> — belokan ekstrem dan putaran rapat; tidak membuat kebal.<br>
+    Memakan item sejenis lagi mengulang waktu ke 50 detik. Tanda di tepi layar menunjuk item terdekat.</p>
+    <p><b>Zoom:</b> tombol + / − (komputer: roda mouse atau tombol +/−). <b>Pause:</b> ⏸ atau tombol P.</p>
+  </div>
+  <button data-go="back">KEMBALI</button>
+</main>
+
+<main id="pause" class="scr" hidden>
+  <h2>Pause</h2>
+  <button id="bRes" class="big">LANJUT</button>
+  <button data-go="adm">ADMIN</button>
+  <button data-go="menu" data-quit>MENU</button>
+</main>
+
+<main id="over" class="scr" hidden>
+  <h2>Game over</h2>
+  <p id="ovT"></p>
+  <button id="bAgain" class="big">MAIN LAGI</button>
+  <button data-go="menu" data-quit>MENU</button>
+</main>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

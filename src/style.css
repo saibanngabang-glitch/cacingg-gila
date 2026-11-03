@@ -41,3 +41,10 @@ textarea{width:min(420px,92vw);font:12px ui-monospace,monospace}
 #zm{right:max(10px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px}
 #jb{width:110px;height:110px;border-radius:50%;border:3px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);transform:translate(-50%,-50%)}
 #jk{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,.55)}
+
+#zl{text-align:center;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 3px #000;min-height:14px}
+#hud #bSpd{right:calc(max(10px,env(safe-area-inset-right)) + 70px);bottom:max(24px,env(safe-area-inset-bottom));width:78px;height:78px;font-size:34px;background:rgba(255,122,26,.35);border-color:#ffb066;touch-action:none}
+#hud #bSpd.on{background:rgba(255,122,26,.85);transform:scale(.94)}
+#hs{left:50%;top:26%;transform:translate(-50%,-50%);opacity:0;font-weight:900;font-size:clamp(26px,7vw,56px);letter-spacing:2px;color:#ff3d5a;text-shadow:0 0 14px rgba(255,61,90,.7),0 2px 0 #000;white-space:nowrap}
+#hs.on{animation:hsPop 1.2s ease-out forwards}
+@keyframes hsPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(1)}}

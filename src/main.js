@@ -1,5 +1,5 @@
 // Cacingg Gila — satu file. Bagian: config · util · dunia · AI · render · input · UI
-const $=s=>document.querySelector(s),W=3200,SP=7;
+const $=s=>document.querySelector(s),W=7200,SP=7,GK=1000; // W = ukuran arena (dulu 3200)
 const rnd=(a,b)=>a+Math.random()*(b-a),cl=(v,a,b)=>Math.max(a,Math.min(b,v)),nang=a=>Math.atan2(Math.sin(a),Math.cos(a));
 const ls={
   get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},
@@ -9,8 +9,8 @@ const ls={
 /* ---------- Konfigurasi: [kunci,label,min|opsi,max,step,default,grup (s=Pengaturan, a=Admin saja)] ---------- */
 const SC=[
 ['baseSpeed','Kecepatan dasar',80,260,5,150,'s'],
-['bots','Jumlah bot',0,20,1,10,'s'],
-['food','Kepadatan makanan',100,800,20,320,'s'],
+['bots','Jumlah bot',0,40,1,18,'s'],
+['food','Jumlah makanan di arena',100,2500,50,1100,'s'],
 ['botLevel','Kesulitan bot (1 mudah – 3 sulit)',1,3,1,2,'s'],
 ['joy','Sensitivitas joystick',.5,2,.1,1,'s'],
 ['zoom','Zoom',.2,4,.05,1,'s'],
@@ -26,15 +26,16 @@ const SC=[
 ['turnSharp','Kecepatan belok TAJAM (rad/dtk)',6,20,.5,14,'a'],
 ['zMin','Zoom minimum',.2,1,.05,.5,'a'],
 ['zMax','Zoom maksimum',1,4,.1,2.4,'a'],
-['itemEach','Jumlah tiap jenis item',1,15,1,5,'a'],
+['itemEach','Jumlah tiap jenis item',1,30,1,9,'a'],
+['thick','Pertumbuhan ketebalan cacing',0,2,.1,1,'a'],
 ['skinMB','Batas upload skin (MB)',1,10,1,5,'a']
 ];
 const DEF=Object.fromEntries(SC.map(r=>[r[0],r[5]]));
 function clean(o){const c={};if(!o||typeof o!=='object')return c;for(const[k,,a,b]of SC){const v=o[k];if(typeof v!=='number'||!isFinite(v))continue;if(typeof a==='object'){if(v in a)c[k]=v}else c[k]=cl(v,a,b)}return c}
-let cfg={...DEF,...clean(ls.get('cg_cfg',{}))};
+let cfg={...DEF,...clean(ls.get('cg_cfg2',{}))};
 function fixCfg(){cfg.zMax=Math.max(cfg.zMax,cfg.zMin+.1);cfg.zoom=cl(cfg.zoom,cfg.zMin,cfg.zMax)}
 fixCfg();
-const save=()=>ls.set('cg_cfg',cfg);
+const save=()=>ls.set('cg_cfg2',cfg);
  
 /* ---------- State ---------- */
 const SKINS=[['#39ff88','#0b8f4a',1],['#ff5c7a','#7a1230',2],['#4cc9ff','#1b4b9b',1],['#ffd23f','#c2570c',2],['#c77dff','#4a1d8f',0],['#f4f4f4','#7f8fa6',1]];
@@ -47,7 +48,7 @@ let stat=ls.get('cg_stat',{g:0,best:0,last:null});
  
 /* ---------- Dunia ---------- */
 function mk(x,y,name,type,sk){
-  const a=rnd(0,6.283),w={name,type,a,wa:a,ta:a,ai:0,sd:Math.random()<.5?1:-1,pts:[],score:0,food:0,grow:0,r:8,fx:{s:0,f:0,t:0,m:1},sk,dead:0};
+  const a=rnd(0,6.283),w={name,type,a,wa:a,ta:a,ai:0,sd:Math.random()<.5?1:-1,pts:[],score:0,food:0,grow:0,r:8,tr:8,sp:SP,fx:{s:0,f:0,t:0,m:1},sk,dead:0};
   for(let i=0;i<10;i++)w.pts.push({x:x-Math.cos(a)*SP*i,y:y-Math.sin(a)*SP*i,w});
   return w;
 }
@@ -55,25 +56,28 @@ const mkFood=(x,y,v)=>({x:x??rnd(40,W-40),y:y??rnd(40,W-40),v:v||(Math.random()<
 const rate=w=>Math.min(22,(w.fx.t>0?cfg.turnSharp:cfg.turn)*(w===P?cfg.joy:1));
 const spd=w=>cfg.baseSpeed*(w.fx.s>0?cfg.speedMult:1);
 function move(w,dt){
-  const p=w.pts,h=p[0],s=spd(w)*dt;
+  const p=w.pts,h=p[0],s=spd(w)*dt,sp=w.sp;
   h.x+=Math.cos(w.a)*s;h.y+=Math.sin(w.a)*s;
-  for(let i=1;i<p.length;i++){const a=p[i],b=p[i-1],dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy)||1;a.x=b.x+dx/d*SP;a.y=b.y+dy/d*SP}
+  for(let i=1;i<p.length;i++){const a=p[i],b=p[i-1],dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy)||1;a.x=b.x+dx/d*sp;a.y=b.y+dy/d*sp}
 }
 function steerP(dt){
   const w=P,m=rate(w)*dt,k=(keys.arrowright||keys.d?1:0)-(keys.arrowleft||keys.a?1:0);
-  if(k){w.a+=k*m;ctl.a=null}else if(ctl.a!=null)w.a+=cl(nang(ctl.a-w.a),-m,m);
+  if(k)ctl.a=null;
+  w.kv=(w.kv||0)+(k-(w.kv||0))*Math.min(1,dt*10); // tombol: belok dihaluskan, tidak patah
+  if(Math.abs(w.kv)>.02)w.a+=w.kv*m;
+  else if(ctl.a!=null)w.a+=cl(nang(ctl.a-w.a)*Math.min(1,dt*14),-m,m); // makin dekat arah tujuan makin halus
   w.a=nang(w.a);
 }
 function grid(){
   G.clear();
-  for(const w of B){if(w.dead)continue;for(const p of w.pts){const k=(p.x/64|0)*100+(p.y/64|0);let a=G.get(k);if(!a)G.set(k,a=[]);a.push(p)}}
+  for(const w of B){if(w.dead)continue;for(const p of w.pts){const k=(p.x/64|0)*GK+(p.y/64|0);let a=G.get(k);if(!a)G.set(k,a=[]);a.push(p)}}
 }
 // true bila titik (x,y) dekat dinding atau badan cacing lain (dipakai bot & spawn)
 function hit(x,y,w,m){
-  if(x<60||y<60||x>W-60||y>W-60)return 1;
+  const wm=w.r*1.5+45;if(x<wm||y<wm||x>W-wm||y>W-wm)return 1;
   const cx=x/64|0,cy=y/64|0;
   for(let i=cx-1;i<=cx+1;i++)for(let j=cy-1;j<=cy+1;j++){
-    const a=G.get(i*100+j);
+    const a=G.get(i*GK+j);
     if(a)for(const p of a){if(p.w===w)continue;const d=(w.r+p.w.r)*.8+m;if((p.x-x)**2+(p.y-y)**2<d*d)return 1}
   }
   return 0;
@@ -93,7 +97,7 @@ function think(w){
     if(T==2&&d<450**2){const L=Math.min(160,Math.sqrt(d)*.6);tx=q.x+Math.cos(o.a)*L;ty=q.y+Math.sin(o.a)*L;break} // potong jalur di depan kepala lawan
     if(T==3&&d<170**2){tx=h.x+(h.x-q.x)*2;ty=h.y+(h.y-q.y)*2;break} // menjauh dari kepala dekat
   }
-  const ang=Math.atan2(ty-h.y,tx-h.x),D=[40,75,120].slice(0,T==0?1:T==3?3:2).map(v=>v*lv),s=w.sd;
+  const ang=Math.atan2(ty-h.y,tx-h.x),D=[40,75,120].slice(0,T==0?1:T==3?3:2).map(v=>v*lv*Math.max(1,w.r/9)),s=w.sd;
   const free=a=>D.every(d=>!hit(h.x+Math.cos(a)*d,h.y+Math.sin(a)*d,w,6));
   let a=ang;
   if(!free(a)){
@@ -117,7 +121,7 @@ function collide(){
     if(h.x<w.r||h.y<w.r||h.x>W-w.r||h.y>W-w.r){dead.add(w);continue}
     const cx=h.x/64|0,cy=h.y/64|0;
     for(let i=cx-1;i<=cx+1;i++)for(let j=cy-1;j<=cy+1;j++){
-      const a=G.get(i*100+j);
+      const a=G.get(i*GK+j);
       if(a)for(const p of a){
         const o=p.w;if(o===w||o.dead)continue;
         const d=(w.r+o.r)*.8;
@@ -134,7 +138,7 @@ function gain(w,v){
   const m=w.fx.f>0?w.fx.m:1,p=v*m; // pengali dihitung sekali per makanan
   w.score+=p;w.food++;w.grow+=p*.3;
   while(w.grow>=1){w.grow--;const l=w.pts[w.pts.length-1];w.pts.push({x:l.x,y:l.y,w})}
-  w.r=8+Math.min(7,w.pts.length/70);
+  w.tr=8+Math.min(28,Math.sqrt(Math.max(0,w.pts.length-10))*.95*cfg.thick); // makin banyak makan: makin panjang DAN makin tebal
   if(w===P)beep(520,.04);
 }
 function pick(w,k){ // satu timer per efek; mengambil lagi = ulang ke durasi penuh, tanpa cooldown
@@ -182,11 +186,12 @@ function tick(){ // menjaga jumlah makanan, item per jenis, dan bot
 function update(dt){
   tm+=dt;
   for(const w of B)for(const k of['s','f','t'])if(w.fx[k]>0)w.fx[k]=Math.max(0,w.fx[k]-dt);
+  for(const w of B){w.r+=(w.tr-w.r)*Math.min(1,dt*3);w.sp=SP*(.75+w.r/32)}
   for(const w of B){if(w.dead)continue;if(w===P)steerP(dt);else ai(w,dt);move(w,dt)}
   grid();collide();eatAll();
   B=B.filter(w=>!w.dead);
   const h=P.pts[0],k=Math.min(1,dt*9);
-  cam.x+=(h.x-cam.x)*k;cam.y+=(h.y-cam.y)*k;zoom+=(cfg.zoom-zoom)*Math.min(1,dt*8);
+  cam.x+=(h.x-cam.x)*k;cam.y+=(h.y-cam.y)*k;zoom+=(cfg.zoom*Math.pow(8/P.r,.55)-zoom)*Math.min(1,dt*3); // makin besar cacing, kamera otomatis menjauh
 }
  
 /* ---------- Render ---------- */
@@ -251,7 +256,15 @@ function draw(){
   }
   c.setTransform(dpr,0,0,dpr,0,0);c.textAlign='center';c.textBaseline='middle';c.font='bold 12px system-ui';c.fillStyle='#fff';
   for(const w of B){const h=w.pts[0],x=(h.x-cam.x)*S+VW/2,y=(h.y-cam.y)*S+VH/2-w.r*S-10;if(x>0&&x<VW&&y>0&&y<VH)c.fillText(w.name,x,y)}
-  ind(c,S);
+  ind(c,S);mini(c,hw,hh);
+}
+function mini(c,hw,hh){ // peta mini kiri bawah
+  const M=Math.min(130,VW*.3),mx=12,my=VH-M-12,k=M/W;
+  c.globalAlpha=.55;c.fillStyle='#000';c.fillRect(mx,my,M,M);c.globalAlpha=1;
+  c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=1.5;c.strokeRect(mx,my,M,M);
+  for(const w of B){if(w===P)continue;const h=w.pts[0];c.fillStyle='#ff5c7a';c.fillRect(mx+h.x*k-1.5,my+h.y*k-1.5,3,3)}
+  c.strokeStyle='rgba(255,255,255,.8)';c.strokeRect(mx+(cam.x-hw)*k,my+(cam.y-hh)*k,hw*2*k,hh*2*k);
+  const h=P.pts[0];c.fillStyle='#39ff88';c.beginPath();c.arc(mx+h.x*k,my+h.y*k,3.5,0,6.3);c.fill();
 }
 function resize(){
   const r=cv.getBoundingClientRect();
@@ -291,13 +304,18 @@ function quit(){
 function pause(){if(st!='play')return;st='pause';joy=null;$('#jb').hidden=true;show('pause')}
 function resume(){if(st!='pause')return;st='play';hideAll()}
 function zm(k){cfg.zoom=cl(+(cfg.zoom*k).toFixed(3),cfg.zMin,cfg.zMax);save()}
-let last=0,tk=0,fa=0;
+let last=0,tk=0,fa=0,acc=0;
 function loop(ts){
   requestAnimationFrame(loop);
   const raw=(ts-last)/1000;last=ts;
   if(raw>0&&raw<1)fps+=(1/raw-fps)*.05;
-  const dt=Math.min(raw>0?raw:0,1/45); // batas dt: gerak per frame kecil, tabrakan tidak tembus
-  if(st=='play'){update(dt);tk+=dt;fa+=dt;if(tk>.4){tk=0;tick()}if(fa>.12){fa=0;hud()}}
+  const dt=Math.min(raw>0?raw:0,.1);
+  if(st=='play'){
+    acc+=dt;let n=0; // langkah tetap ≤1/60 dtk: kecepatan konstan di HP lambat & tabrakan tidak tembus
+    while(acc>=1/60&&n<6){update(1/60);acc-=1/60;n++}
+    if(n==6)acc=0;
+    tk+=dt;fa+=dt;if(tk>.4){tk=0;tick()}if(fa>.12){fa=0;hud()}
+  }
   if(P&&st!='menu')draw();
 }
  
@@ -331,7 +349,6 @@ addEventListener('keydown',e=>{
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=0});
 document.addEventListener('visibilitychange',()=>document.hidden&&pause());
-addEventListener('blur',pause);
 addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,200));
  
 /* ---------- UI: layar, form, skin, admin ---------- */

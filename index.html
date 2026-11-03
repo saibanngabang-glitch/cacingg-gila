@@ -15,7 +15,9 @@
   <div id="stats"></div>
   <div id="fx"></div>
   <div id="tb"><button id="bPause" aria-label="Pause">⏸</button><button id="bMenu" aria-label="Kembali ke menu">⌂</button></div>
-  <div id="zm"><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button></div>
+  <div id="zm"><button id="zIn" aria-label="Zoom in">+</button><div id="zl"></div><button id="zOut" aria-label="Zoom out">−</button></div>
+  <button id="bSpd" aria-label="Speed (tahan)">⚡</button>
+  <div id="hs"></div>
   <div id="jb" hidden><i id="jk"></i></div>
 </div>
 
@@ -25,7 +27,6 @@
   <button id="bPlay" class="big">MAIN</button>
   <button data-go="skin">SKIN</button>
   <button data-go="set">PENGATURAN</button>
-  <button data-go="adm">ADMIN PANEL</button>
   <button data-go="help">CARA BERMAIN</button>
 </main>
 
@@ -52,28 +53,18 @@
   <button data-go="back">KEMBALI</button>
 </main>
 
-<main id="adm" class="scr" hidden>
-  <h2>Admin Panel</h2>
-  <pre id="dash"></pre>
-  <div id="admF"></div>
-  <textarea id="js" rows="4" placeholder="JSON konfigurasi (untuk impor)"></textarea>
-  <div class="row"><button id="exp">EKSPOR</button><button id="imp">IMPOR</button><button id="rst">RESET</button></div>
-  <p id="admMsg"></p>
-  <button data-go="back">KEMBALI</button>
-</main>
-
 <main id="help" class="scr" hidden>
   <h2>Cara bermain</h2>
   <div class="txt">
     <p><b>Gerak:</b> sentuh dan geser jempol di layar; joystick muncul di titik sentuhan. Di komputer: gerakkan mouse, atau tombol ← → (A/D).</p>
-    <p>Makan titik warna untuk tumbuh: cacing jadi makin <b>panjang dan makin tebal</b> (kamera otomatis menjauh). Arena luas; lihat peta mini di kiri bawah.</p>
-    <p> Kepala yang menabrak badan cacing lain atau dinding kalah. Adu kepala: yang lebih pendek kalah.</p>
-    <p><b>Item</b> (dimakan dengan kepala, aktif 50 detik, tanpa cooldown):<br>
-    ⚡ <b>SPEED</b> — lebih cepat.<br>
-    🍏 <b>PENGGANDA</b> — nilai makanan ×2 / ×5 / ×10 (diatur di Admin Panel).<br>
-    ↪ <b>BELOK TAJAM</b> — belokan ekstrem dan putaran rapat; tidak membuat kebal.<br>
-    Memakan item sejenis lagi mengulang waktu ke 50 detik. Tanda di tepi layar menunjuk item terdekat.</p>
-    <p><b>Zoom:</b> tombol + / − (komputer: roda mouse atau tombol +/−). <b>Pause:</b> ⏸ atau tombol P.</p>
+    <p><b>Speed:</b> tahan tombol ⚡ di layar (komputer: Spasi / Shift) untuk ngebut. Lepas, kecepatan turun bertahap.</p>
+    <p>Makan titik warna untuk tumbuh: cacing jadi makin <b>panjang dan tebal</b>. Kepala yang menabrak badan cacing lain atau dinding kalah. Adu kepala: yang lebih pendek kalah &mdash; menang adu kepala = <b>HEADSHOT!</b> (+25 skor).</p>
+    <p><b>Item</b> (cari sendiri di arena yang luas, dimakan dengan kepala; tiap item hilang sendiri kalau lama tidak dimakan lalu muncul di tempat lain):<br>
+    ⚡ <b>SPEED</b> — jauh lebih cepat.<br>
+    ↪ <b>TURN</b> — belokan sangat tajam &amp; kontrol lebih responsif (tanpa ini belokan lebih lebar).<br>
+    <b>×2 / ×5 / ×10</b> — nilai makanan dikali 2 / 5 / 10.<br>
+    Memakan item sejenis lagi mengulang waktu efeknya.</p>
+    <p><b>Zoom:</b> tombol + / − (tahan untuk terus), roda mouse atau +/−. Bisa melihat area hingga 50× lebih luas. Hanya cacing terdekat yang digambar; peta mini di kiri bawah. <b>Pause:</b> ⏸ atau tombol P.</p>
   </div>
   <button data-go="back">KEMBALI</button>
 </main>
@@ -81,7 +72,6 @@
 <main id="pause" class="scr" hidden>
   <h2>Pause</h2>
   <button id="bRes" class="big">LANJUT</button>
-  <button data-go="adm">ADMIN</button>
   <button data-go="menu" data-quit>MENU</button>
 </main>
 

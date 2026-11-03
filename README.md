@@ -25,20 +25,26 @@ npm run preview
 
 ## Item dan kontrol
 
-- Tiga item acak muncul di arena dan dimakan dengan kepala: ⚡ SPEED (×1,6), 🍏 PENGGANDA (×2/×5/×10), ↪ BELOK TAJAM. Masing-masing aktif 50 detik; mengambil lagi mengulang ke 50 detik. Tidak ada cooldown. Waktu hanya berjalan saat game tidak di-pause.
+- Lima jenis item (⚡ SPEED, ↪ TURN, ×2, ×5, ×10) dimakan dengan kepala; efek aktif 50 detik (dapat diatur), mengambil lagi mengulang waktunya.
 - Gerak: sentuh dan geser jempol (joystick muncul di titik sentuhan); komputer: mouse atau ← → / A D.
 - Zoom + dan − selalu tersedia (komputer: roda mouse atau tombol +/−). Zoom hanya mengubah tampilan, bukan hitbox.
 - Aturan tabrakan sama untuk pemain dan bot: kepala menabrak badan lain atau dinding = kalah; adu kepala = yang lebih pendek kalah (sama panjang = keduanya kalah). Cacing tidak kebal terhadap apa pun.
 
 ## Pembaruan terbaru
 
-- Cacing makin banyak makan makin **panjang dan tebal** (ketebalan diatur lewat Admin Panel: *Pertumbuhan ketebalan cacing*; 0 = tidak menebal). Kamera menjauh otomatis agar cacing besar tetap terlihat.
-- Belokan lebih halus (tombol dan joystick/mouse diredam, tidak patah), dan game memakai langkah waktu tetap sehingga kecepatan tidak melambat/tersendat di HP lambat. Pause otomatis hanya saat tab/aplikasi disembunyikan.
-- Arena diperluas dari 3200 ke 7200 (±5× luas), jumlah makanan, bot, dan item default ikut dinaikkan, plus peta mini di kiri bawah. Pengaturan lama direset ke default baru (kunci penyimpanan `cg_cfg2`).
+- **Badan mengikuti kepala sempurna:** tiap ruas ditaruh di jarak busur tetap sepanjang *jejak* (riwayat posisi) kepala, jadi saat belok/melingkar seluruh badan dan sisik ikut melengkung, jarak antarruas konsisten, tidak patah.
+- **Manuver:** normal ±2,6 rad/dtk (lebar, wajar); item **TURN** ±10 rad/dtk dengan respons kontrol jauh lebih cepat.
+- **Speed:** tombol ⚡ di layar (tahan; komputer: Spasi/Shift) dan item **SPEED**; kecepatan naik cepat, turun bertahap.
+- **Item:** SPEED, TURN, **×2, ×5, ×10** (bentuk & warna beda). Tiap item punya timer di peta sendiri: ×2 15 mnt, ×5 10 mnt, ×10 2 mnt, SPEED/TURN 3 mnt; habis/dimakan → muncul lagi di lokasi lain. Timer ini terpisah dari durasi efek setelah dimakan.
+- **Headshot:** menang adu kepala (lawan lebih pendek) = teks **HEADSHOT!**, +25 skor, tercatat di HUD.
+- **Arena 50× lebih luas** (22600², dulu 3200²) dan **pandangan hingga 50×** (zoom 0,02; tombol +/− bisa ditahan). Makanan memakai grid spasial.
+- **Render berdasarkan jarak:** hanya cacing terdekat (maks. 16, radius 3000, dapat diatur di Pengaturan) yang digambar, memudar halus di tepi; semua cacing tetap disimulasikan. Item hanya terlihat dari dekat.
+- Panel admin, panah petunjuk item, dan radar item dihapus. Cacing makin banyak makan makin **panjang dan tebal**. Ada peta mini (pemain & area pandang).
+- Konfigurasi (durasi efek, kecepatan belok, jumlah/durasi item, dll.) ada di daftar `SC` dan tabel `ITEMS` di awal `src/main.js`.
 
 ## Cara menguji kemampuan
 
-Buka **Admin Panel** (dari menu atau dari layar pause): naikkan *Jumlah tiap jenis item*, perpendek durasi (mis. 10 detik), atau ubah pengali, lalu MAIN. Panah berwarna di tepi layar menunjuk item terdekat.
+Admin Panel sudah dihapus. Untuk uji cepat, ubah angka di daftar `SC` / tabel `ITEMS` di awal `src/main.js` (mis. `ttl` item atau durasi efek), lalu jalankan ulang.
 
 ## Status pengujian (jujur)
 

@@ -30,6 +30,12 @@ npm run preview
 - Zoom + dan − selalu tersedia (komputer: roda mouse atau tombol +/−). Zoom hanya mengubah tampilan, bukan hitbox.
 - Aturan tabrakan sama untuk pemain dan bot: kepala menabrak badan lain atau dinding = kalah; adu kepala = yang lebih pendek kalah (sama panjang = keduanya kalah). Cacing tidak kebal terhadap apa pun.
 
+## Pembaruan terbaru
+
+- Cacing makin banyak makan makin **panjang dan tebal** (ketebalan diatur lewat Admin Panel: *Pertumbuhan ketebalan cacing*; 0 = tidak menebal). Kamera menjauh otomatis agar cacing besar tetap terlihat.
+- Belokan lebih halus (tombol dan joystick/mouse diredam, tidak patah), dan game memakai langkah waktu tetap sehingga kecepatan tidak melambat/tersendat di HP lambat. Pause otomatis hanya saat tab/aplikasi disembunyikan.
+- Arena diperluas dari 3200 ke 7200 (±5× luas), jumlah makanan, bot, dan item default ikut dinaikkan, plus peta mini di kiri bawah. Pengaturan lama direset ke default baru (kunci penyimpanan `cg_cfg2`).
+
 ## Cara menguji kemampuan
 
 Buka **Admin Panel** (dari menu atau dari layar pause): naikkan *Jumlah tiap jenis item*, perpendek durasi (mis. 10 detik), atau ubah pengali, lalu MAIN. Panah berwarna di tepi layar menunjuk item terdekat.

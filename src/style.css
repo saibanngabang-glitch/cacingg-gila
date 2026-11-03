@@ -48,3 +48,5 @@ textarea{width:min(420px,92vw);font:12px ui-monospace,monospace}
 #hs{left:50%;top:26%;transform:translate(-50%,-50%);opacity:0;font-weight:900;font-size:clamp(26px,7vw,56px);letter-spacing:2px;color:#ff3d5a;text-shadow:0 0 14px rgba(255,61,90,.7),0 2px 0 #000;white-space:nowrap}
 #hs.on{animation:hsPop 1.2s ease-out forwards}
 @keyframes hsPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(1)}}
+#hud #bSpd.item{box-shadow:0 0 0 3px #ffe600,0 0 18px #ffe600;border-color:#ffe600}
+#fx span{font-size:14px}

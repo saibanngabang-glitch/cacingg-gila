@@ -21,15 +21,22 @@ const SC=[
 ['sound','Suara',{0:'Mati',1:'Hidup'},0,0,1,'s'],
 ['fxv','Efek visual',{0:'Mati',1:'Hidup'},0,0,1,'s'],
 ['zoom','Zoom (1 = standar, .02 = pandangan 50× lebih luas)',.02,4,.01,1,'p'],
-['turn','Kecepatan belok NORMAL (rad/dtk)',1.5,8,.1,2.6,'a'],
-['turnSharp','Kecepatan belok item TURN (rad/dtk)',6,20,.5,10,'a'],
-['speedMult','Pengali kecepatan item SPEED',1.1,3,.1,2,'a'],
-['boostMult','Pengali kecepatan tombol SPEED',1.1,2,.05,1.45,'a'],
-['speedCap','Batas kecepatan gabungan (pengali)',1.5,4,.1,2.6,'a'],
+['turn','Kecepatan belok NORMAL (rad/dtk; 5 ≈ putar balik 180° dalam ±0,6 dtk)',2,10,.1,5,'a'],
+['turnSharp','Kecepatan belok BOT yang punya item TURN (rad/dtk)',6,22,.5,18,'a'],
+['turnKey','Putaran tombol kiri/kanan saat item TURN (rad/dtk)',10,60,1,26,'a'],
+['boostMult','Kecepatan tombol SPEED saja = SEDANG (pengali)',1.1,2.2,.05,1.5,'a'],
+['speedHigh','Kecepatan item SPEED + tombol = TINGGI (pengali)',1.5,4,.1,2.4,'a'],
 ['speedDur','Durasi efek SPEED setelah dimakan (detik)',5,300,5,50,'a'],
 ['turnDur','Durasi efek TURN setelah dimakan (detik)',5,300,5,50,'a'],
 ['foodDur','Durasi efek X2/X5/X10 setelah dimakan (detik)',5,300,5,50,'a'],
-['thick','Pertumbuhan ketebalan cacing',0,2,.1,1,'a'],
+['lenMax','Panjang maksimum (jumlah ruas)',100,2000,50,800,'a'],
+['lenK','Skor yang memberi ±63% panjang maks. (kurva panjang)',200,20000,100,2000,'a'],
+['rMax','Radius tubuh maksimum',12,60,1,32,'a'],
+['rK','Skor yang memberi ±63% radius maks. (kurva ukuran)',200,20000,100,3000,'a'],
+['growRate','Laju tambah ruas maksimum (ruas/dtk)',2,60,1,14,'a'],
+['multMode','Penumpukan multiplier',{0:'Dijumlah (1+Σ(m−1))',1:'Dikali (m1×m2×…)'},0,0,1,'a'],
+['multStack','Maks. tumpukan per jenis multiplier',1,10,1,3,'a'],
+['multCap','Batas total pengali',10,100000,10,1000,'a'],
 ['itemSee','Jarak item terlihat (satuan dunia)',600,6000,100,1800,'a'],
 ['zMin','Zoom minimum (pandangan 50×)',.02,1,.01,.02,'a'],
 ['zMax','Zoom maksimum',1,4,.1,2.4,'a'],
@@ -54,7 +61,7 @@ const save=()=>ls.set('cg_cfg3',Object.fromEntries(SC.filter(r=>r[6]!='a').map(r
 
 /* ---------- State ---------- */
 const SKINS=[['#39ff88','#0b8f4a',1],['#ff5c7a','#7a1230',2],['#4cc9ff','#1b4b9b',1],['#ffd23f','#c2570c',2],['#c77dff','#4a1d8f',0],['#f4f4f4','#7f8fa6',1]];
-let skin={c1:SKINS[0][0],c2:SKINS[0][1],p:1,img:0,...(ls.get('cg_skin',null)||{})},tile=null;
+let skin={c1:SKINS[0][0],c2:SKINS[0][1],p:1,img:0,...(ls.get('cg_skin',null)||{})},tile=null,tileAvg='#888';
 const cv=$('#cv'),ctx=cv.getContext('2d'),G=new Map(),FG=new Map();
 const FC=['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c77dff','#ff9f43'];
 const NAMES=['Naga','Kobra','Bima','Sanca','Petir','Gesit','Lumba','Tubi','Jago','Sinyo','Bayu','Kuncen','Rimba','Gledek','Cakra','Wiro'];
@@ -78,7 +85,7 @@ function nearFood(x,y,R){ // makanan terdekat dalam radius R (lewat grid)
 
 /* ---------- Dunia: cacing = kepala + jejak (riwayat posisi kepala). Tiap ruas ditaruh di jarak busur tetap sepanjang jejak ---------- */
 function mk(x,y,name,type,sk){
-  const a=rnd(0,6.283),w={name,type,a,wa:a,ta:a,ai:0,sd:Math.random()<.5?1:-1,pts:[],trail:[],score:0,food:0,grow:0,r:8,tr:8,sp:SP,sv:1,kv:0,va:1,dd:0,hs:0,boost:0,fx:{s:0,f:0,t:0,m:1},sk,dead:0};
+  const a=rnd(0,6.283),w={name,type,a,wa:a,ta:a,ai:0,sd:Math.random()<.5?1:-1,pts:[],trail:[],score:0,food:0,gacc:0,full:1,r:8,tr:8,sp:SP,sv:1,kv:0,va:1,dd:0,hs:0,boost:0,fx:{s:0,t:0,mu:[]},sk,dead:0};
   for(let i=0;i<10;i++)w.pts.push({x:x-Math.cos(a)*SP*i,y:y-Math.sin(a)*SP*i,w});
   for(let i=40;i>=0;i--)w.trail.push(x-Math.cos(a)*3*i,y-Math.sin(a)*3*i); // terlama → terbaru (kepala)
   return w;
@@ -92,7 +99,7 @@ function body(w){ // taruh ruas ke-i di jarak i·sp sepanjang jejak kepala → b
     if(rem<=L){const t=rem/L;ax+=dx*t;ay+=dy*t;p[i].x=ax;p[i].y=ay;i++;rem=sp}
     else{rem-=L;ax=bx;ay=by;k--}
   }
-  const full=i>=n;
+  const full=i>=n;w.full=full;
   for(;i<n;i++){p[i].x=ax;p[i].y=ay}
   if(full&&k>60)T.splice(0,(k-25)*2); // buang jejak yang tidak terpakai
 }
@@ -103,11 +110,17 @@ function move(w,dt){
   body(w);
 }
 function steerP(dt){
-  const w=P,m=rate(w)*dt,tp=w.fx.t>0,k=(keys.arrowright||keys.d?1:0)-(keys.arrowleft||keys.a?1:0);
-  if(k)ctl.a=null;
-  w.kv+=(k-w.kv)*Math.min(1,dt*(tp?26:10)); // item TURN: respons kontrol jauh lebih cepat
-  if(Math.abs(w.kv)>.02)w.a+=w.kv*m;
-  else if(ctl.a!=null)w.a+=cl(nang(ctl.a-w.a)*Math.min(1,dt*(tp?30:12)),-m,m);
+  const w=P,k=(keys.arrowright||keys.d?1:0)-(keys.arrowleft||keys.a?1:0);
+  if(w.fx.t>0){ // item TURN: arah kepala langsung mengikuti kontrol (hingga 360° seketika); badan mengikuti jejaknya
+    if(k){w.a+=k*cfg.turnKey*dt;ctl.a=null}else if(ctl.a!=null)w.a=ctl.a;
+    w.kv=k;
+  }else{ // normal: putar balik 180° dalam ±0,6 dtk, dihaluskan
+    const m=rate(w)*dt;
+    if(k)ctl.a=null;
+    w.kv+=(k-w.kv)*Math.min(1,dt*12);
+    if(Math.abs(w.kv)>.02)w.a+=w.kv*m;
+    else if(ctl.a!=null)w.a+=cl(nang(ctl.a-w.a)*Math.min(1,dt*14),-m,m);
+  }
   w.a=nang(w.a);
 }
 function grid(){
@@ -154,6 +167,7 @@ function ai(w,dt){
 }
 
 /* ---------- Tabrakan, headshot, makan, item ---------- */
+const lose=(a,b)=>a.pts.length<b.pts.length||(a.pts.length==b.pts.length&&a.score<=b.score);
 function collide(){
   const dead=new Set(),hp=[];
   for(const w of B){
@@ -167,7 +181,7 @@ function collide(){
         const o=p.w;if(o===w||o.dead)continue;
         const d=(w.r+o.r)*.8;
         if((p.x-h.x)**2+(p.y-h.y)**2<d*d){
-          if(p===o.pts[0]){if(w.pts.length<=o.pts.length){dead.add(w);hp.push(w,o)}} // adu kepala: yang lebih pendek kalah, sama panjang = keduanya kalah
+          if(p===o.pts[0]){if(lose(w,o)){dead.add(w);hp.push(w,o)}} // adu kepala: yang lebih pendek kalah, sama panjang = keduanya kalah
           else dead.add(w); // kepala menabrak badan
         }
       }
@@ -180,17 +194,35 @@ function headshot(){
   P.hs++;P.score+=25;beep(1000,.15);
   const e=$('#hs');e.textContent='HEADSHOT! +25';e.classList.remove('on');void e.offsetWidth;e.classList.add('on');
 }
-function gain(w,v){
-  const m=w.fx.f>0?w.fx.m:1,p=v*m; // pengali dihitung sekali per makanan
-  w.score+=p;w.food++;w.grow+=p*.3;
-  while(w.grow>=1){w.grow--;const l=w.pts[w.pts.length-1];w.pts.push({x:l.x,y:l.y,w})}
-  w.tr=8+Math.min(28,Math.sqrt(Math.max(0,w.pts.length-10))*.95*cfg.thick); // makin banyak makan: makin panjang DAN makin tebal
-  if(w===P)beep(520,.04);
+function mult(w){ // total pengali dari semua multiplier yang sedang aktif (tiap multiplier punya timer sendiri)
+  const mu=w.fx.mu;if(!mu.length)return 1;let p=1,sm=0;
+  for(const i of mu){p*=i.m;sm+=i.m-1}
+  return Math.min(cfg.multCap,cfg.multMode?p:1+sm);
 }
-function pick(w,k){ // satu timer efek per jenis; mengambil lagi = ulang ke durasi penuh
+function gain(w,v){
+  const p=v*mult(w); // pengali dihitung sekali per makanan
+  w.score+=p;w.food++;
+}
+// Pertumbuhan berdasar skor (kurva jenuh, dapat dikonfigurasi): panjang & diameter naik bertahap sampai batas
+const lenFor=sc=>Math.round(10+(cfg.lenMax-10)*(1-Math.exp(-sc/cfg.lenK)));
+const radFor=sc=>8+(cfg.rMax-8)*(1-Math.exp(-sc/cfg.rK));
+function growBody(w,dt){
+  w.tr=radFor(w.score);
+  const need=lenFor(w.score)-w.pts.length;
+  if(need>0&&w.full){ // ruas baru hanya ditambah bila jejak kepala cukup panjang → jarak antarruas tidak berantakan
+    w.gacc=Math.min(3,w.gacc+cfg.growRate*dt);
+    let n=Math.min(need,w.gacc|0);w.gacc-=n;
+    while(n-->0){const l=w.pts[w.pts.length-1];w.pts.push({x:l.x,y:l.y,w})}
+  }else if(need<=0)w.gacc=0;
+}
+function pick(w,k){ // tiap item punya timer sendiri; multiplier TIDAK saling mengganti
   if(k==0)w.fx.s=cfg.speedDur;
   else if(k==1)w.fx.t=cfg.turnDur;
-  else{w.fx.m=w.fx.f>0?Math.max(w.fx.m,MULT[k]):MULT[k];w.fx.f=cfg.foodDur}
+  else{
+    const mu=w.fx.mu,m=MULT[k];let same=mu.filter(i=>i.m==m);
+    if(same.length<cfg.multStack)mu.push({m,t:cfg.foodDur}); // tumpukan baru dengan timer sendiri; yang lama tidak disentuh
+    else{let lo=same[0];for(const i of same)if(i.t<lo.t)lo=i;lo.t=cfg.foodDur} // tumpukan penuh: perpanjang yang paling hampir habis
+  }
   if(w===P)beep(880,.12);
 }
 function eatAll(){
@@ -241,13 +273,16 @@ function tick(){ // menjaga jumlah makanan, item per jenis, dan bot
 function update(dt){
   tm+=dt;
   for(const w of B){
-    const f=w.fx;for(const k of['s','f','t'])if(f[k]>0)f[k]=Math.max(0,f[k]-dt);
-    w.r+=(w.tr-w.r)*Math.min(1,dt*3);w.sp=SP*(.75+w.r/32);
-    const tg=Math.min(cfg.speedCap,(f.s>0?cfg.speedMult:1)*(w.boost?cfg.boostMult:1));
-    w.sv+=(tg-w.sv)*Math.min(1,dt*(tg>w.sv?5:1.4)); // naik cepat, turun bertahap
+    const f=w.fx;for(const k of['s','t'])if(f[k]>0)f[k]=Math.max(0,f[k]-dt);
+    for(let i=f.mu.length-1;i>=0;i--){f.mu[i].t-=dt;if(f.mu[i].t<=0)f.mu.splice(i,1)} // hanya multiplier yang habis yang hilang
+    if(w!==P)w.boost=f.s>0?1:0;
+    w.r+=(w.tr-w.r)*Math.min(1,dt*3);w.sp=SP*(.75+w.r/32); // jarak ruas ikut ukuran tubuh
+    // 3 kondisi: normal=1 · tombol=SEDANG · item SPEED + tombol=TINGGI · item tanpa tombol=normal
+    const tg=w.boost?(f.s>0?cfg.speedHigh:cfg.boostMult):1;
+    w.sv+=(tg-w.sv)*Math.min(1,dt*(tg>w.sv?7:6));
   }
   P.boost=(keys[' ']||keys.shift||btnS)?1:0;
-  for(const w of B){if(w.dead)continue;if(w===P)steerP(dt);else ai(w,dt);move(w,dt)}
+  for(const w of B){if(w.dead)continue;if(w===P)steerP(dt);else ai(w,dt);move(w,dt);growBody(w,dt)}
   grid();collide();eatAll();
   for(let i=I.length-1;i>=0;i--){const it=I[i];it.ttl-=dt;if(it.ttl<=0)I[i]=mkItem(it.t,it)} // despawn → respawn di lokasi berbeda; timer tiap item mandiri
   B=B.filter(w=>!w.dead);
@@ -272,19 +307,43 @@ function vis(dt){
 }
 
 /* ---------- Render ---------- */
-function drawW(c,pts,r,sk,glow,step){
+function drawW(c,pts,r,sk,glow,step,T,V){
+  // T = {s,e,f}: skala & geser transform dunia (untuk memasang tekstur per segmen); V = kotak pandang (culling)
   if(pts.length<2)return;
-  step=step||1;const img=sk.img&&tile;
+  step=step||1;const img=sk.img&&tile&&T,n=pts.length;
   c.lineCap=c.lineJoin='round';c.setLineDash([]);
-  c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let i=step;i<pts.length;i+=step)c.lineTo(pts[i].x,pts[i].y);
-  if((pts.length-1)%step){const l=pts[pts.length-1];c.lineTo(l.x,l.y)}
+  c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let i=step;i<n;i+=step)c.lineTo(pts[i].x,pts[i].y);
+  if((n-1)%step){const l=pts[n-1];c.lineTo(l.x,l.y)}
   if(glow){c.strokeStyle=glow;c.lineWidth=r*2.8;const ga=c.globalAlpha;c.globalAlpha=ga*.3;c.stroke();c.globalAlpha=ga}
-  c.lineWidth=r*2;c.strokeStyle=img?c.createPattern(tile,'repeat'):sk.c1;c.stroke();
-  if(!img&&sk.p&&step<3){ // sisik/pola mengikuti jalur badan
+  if(cfg.gfx>0){c.strokeStyle='rgba(0,0,0,.35)';c.lineWidth=r*2.22;c.stroke()} // garis tepi
+  c.lineWidth=r*2;c.strokeStyle=img?tileAvg:sk.c1;c.stroke(); // alas: badan selalu solid (tidak transparan)
+  if(img){ // tekstur dipetakan per segmen: u = jarak sepanjang badan, v = melintang badan → ikut melengkung, berputar, dan membesar bersama tubuh
+    const iw=tile.width,ih=tile.height,L=2*r;let u=0;
+    for(let i=0;i<n-1;i+=step){
+      const a=pts[i],b=pts[Math.min(i+step,n-1)],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);if(len<.01)continue;
+      const u0=u;u+=len/L;
+      if(V&&(a.x<V.x0||a.x>V.x1||a.y<V.y0||a.y>V.y1)&&(b.x<V.x0||b.x>V.x1||b.y<V.y0||b.y>V.y1))continue;
+      const co=dx/len,si=dy/len;c.setTransform(T.s*co,T.s*si,-T.s*si,T.s*co,T.s*a.x+T.e,T.s*a.y+T.f);
+      const f0=u0-Math.floor(u0),sw=Math.min(iw,len/L*iw),sx=f0*iw,dl=len+.8;
+      if(len>=L)c.drawImage(tile,0,0,iw,ih,0,-r,dl,L);
+      else if(sx+sw<=iw)c.drawImage(tile,sx,0,sw,ih,0,-r,dl,L);
+      else{const s1=iw-sx,w1=s1/iw*L;c.drawImage(tile,sx,0,s1,ih,0,-r,w1+.8,L);c.drawImage(tile,0,0,sw-s1,ih,w1,-r,dl-w1,L)}
+    }
+    c.setTransform(T.s,0,0,T.s,T.e,T.f);
+  }else if(sk.p&&step<3){ // sisik/pola bawaan mengikuti jalur badan
+    c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let i=step;i<n;i+=step)c.lineTo(pts[i].x,pts[i].y);
     c.strokeStyle=sk.c2;
     if(sk.p==1){c.lineCap='butt';c.lineWidth=r*2;c.setLineDash([r*.9,r*1.8])}else{c.lineWidth=r*1.1;c.setLineDash([.1,r*2.2])}
     c.stroke();c.setLineDash([]);c.lineCap='round';
   }
+  if(cfg.gfx>0){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let i=step;i<n;i+=step)c.lineTo(pts[i].x,pts[i].y);c.strokeStyle='rgba(255,255,255,.13)';c.lineWidth=r*.55;c.stroke()} // highlight → kesan bulat
+}
+function head(c,h,a,r,sk,T){ // kepala ikut membesar: 1,14× radius tubuh, kulit sama dengan badan
+  const hr=r*1.14;
+  c.beginPath();c.arc(h.x,h.y,hr,0,6.283);c.fillStyle=sk.img&&tile?tileAvg:sk.c1;c.fill();
+  if(sk.img&&tile){c.save();c.beginPath();c.arc(h.x,h.y,hr,0,6.283);c.clip();c.translate(h.x,h.y);c.rotate(a);c.drawImage(tile,-hr,-hr,hr*2,hr*2);c.restore()}
+  if(cfg.gfx>0){c.strokeStyle='rgba(0,0,0,.35)';c.lineWidth=r*.2;c.beginPath();c.arc(h.x,h.y,hr,0,6.283);c.stroke()}
+  eyes(c,h,a,hr);
 }
 function eyes(c,h,a,r){
   for(const s of[-1,1]){
@@ -308,6 +367,7 @@ function draw(){
   c.setTransform(dpr,0,0,dpr,0,0);c.fillStyle='#070b18';c.fillRect(0,0,VW,VH);
   c.setTransform(S*dpr,0,0,S*dpr,(VW/2-cam.x*S)*dpr,(VH/2-cam.y*S)*dpr);
   const hw=VW/S/2+40,hh=VH/S/2+40,x0=cam.x-hw,x1=cam.x+hw,y0=cam.y-hh,y1=cam.y+hh;
+  const TT={s:S*dpr,e:(VW/2-cam.x*S)*dpr,f:(VH/2-cam.y*S)*dpr},VV={x0:x0-60,x1:x1+60,y0:y0-60,y1:y1+60};
   c.fillStyle='#10183a';c.fillRect(0,0,W,W);
   let gs=100;while(gs*S<16)gs*=2;
   c.strokeStyle='rgba(255,255,255,.06)';c.lineWidth=Math.max(2,1/S);c.beginPath();
@@ -327,10 +387,11 @@ function draw(){
     const h=w.pts[0],sp=w.sp,m=w.pts.length*sp;
     if(Math.abs(h.x-cam.x)>hw+m||Math.abs(h.y-cam.y)>hh+m)continue;
     const rr=Math.max(w.r,1.6/S),near=w.dd<(cfg.renderDist*.5)**2;
-    const g=cfg.fxv&&near?(w.fx.s>0?'#ffe600':w.fx.t>0?'#ff7a1a':w.fx.f>0?'#6bff8a':0):0;
+    const g=cfg.fxv&&near?(w.fx.s>0?'#ffe600':w.fx.t>0?'#ff7a1a':w.fx.mu.length?'#6bff8a':0):0;
     c.globalAlpha=w.va;
-    drawW(c,w.pts,rr,w.sk,g,Math.max(1,Math.floor(2.5/(S*sp))));
-    if(rr*S>3)eyes(c,h,w.a,rr);
+    const stp=Math.max(1,Math.floor((w.sk.img&&tile?4:2.5)/(S*sp)));
+    drawW(c,w.pts,rr,w.sk,g,stp,TT,VV);
+    if(rr*S>1.5)head(c,h,w.a,rr,w.sk,TT);else{c.fillStyle=w.sk.c1;c.beginPath();c.arc(h.x,h.y,rr*1.14,0,6.3);c.fill()}
     c.globalAlpha=1;
   }
   c.setTransform(dpr,0,0,dpr,0,0);
@@ -355,7 +416,8 @@ function resize(){
 function hud(){
   if(!P)return;const f=P.fx;
   $('#stats').innerHTML=`<b>${P.score|0}</b> skor<br>Panjang ${P.pts.length} · Makan ${P.food}<br>Headshot ${P.hs}`;
-  $('#fx').innerHTML=(f.s>0?`<span class=s>⚡ ${Math.ceil(f.s)}s</span>`:'')+(f.t>0?`<span class=t>↪ ${Math.ceil(f.t)}s</span>`:'')+(f.f>0?`<span class=f>×${f.m} ${Math.ceil(f.f)}s</span>`:'');
+  $('#fx').innerHTML=(f.s>0?`<span class=s>⚡ ${Math.ceil(f.s)}s</span>`:'')+(f.t>0?`<span class=t>↪ ${Math.ceil(f.t)}s</span>`:'')+f.mu.map(i=>`<span class=f>×${i.m} ${Math.ceil(i.t)}s</span>`).join('')+(f.mu.length>1?`<span class=f>Total ×${mult(P)}</span>`:'');
+  $('#bSpd').classList.toggle('item',f.s>0);
   $('#zl').textContent=cfg.zoom>1.05?'dekat':(1/cfg.zoom).toFixed(cfg.zoom<.2?0:1)+'×';
 }
 let ac;
@@ -431,12 +493,17 @@ addEventListener('keydown',e=>{
 });
 addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=0});
 document.addEventListener('visibilitychange',()=>document.hidden&&pause());
-addEventListener('blur',()=>{keys={};btnS=0});
+addEventListener('blur',()=>{keys={};if(window.__spdOff)window.__spdOff()});
 addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,200));
-// tombol SPEED di layar (tahan untuk ngebut)
-{const bs=$('#bSpd'),off=()=>{btnS=0;bs.classList.remove('on')};
- bs.addEventListener('pointerdown',e=>{e.preventDefault();btnS=1;bs.classList.add('on');try{bs.setPointerCapture(e.pointerId)}catch{}});
- for(const ev of['pointerup','pointercancel','lostpointercapture'])bs.addEventListener(ev,off)}
+// tombol SPEED di layar (tahan). Dilepas di mana pun / sentuhan dibatalkan / jendela kehilangan fokus → langsung mati (tidak pernah terkunci)
+{const bs=$('#bSpd');let pid=null;
+ const off=e=>{if(e&&pid!=null&&e.pointerId!=null&&e.pointerId!==pid)return;pid=null;btnS=0;bs.classList.remove('on')};
+ bs.addEventListener('pointerdown',e=>{e.preventDefault();pid=e.pointerId;btnS=1;bs.classList.add('on');try{bs.setPointerCapture(e.pointerId)}catch{}});
+ for(const ev of['pointerup','pointercancel','lostpointercapture'])bs.addEventListener(ev,off);
+ addEventListener('pointerup',off);addEventListener('pointercancel',off);
+ addEventListener('touchend',e=>{if(!e.touches.length)off()});
+ bs.addEventListener('contextmenu',e=>e.preventDefault());
+ window.__spdOff=off}
 // tombol zoom: tekan = satu langkah, tahan = terus mengubah
 function hold(btn,k){
   let t1,t2;const stop=()=>{clearTimeout(t1);clearInterval(t2)};
@@ -482,11 +549,11 @@ function form(sel){
 function pv(){
   const c=$('#pv').getContext('2d'),p=[];c.clearRect(0,0,260,90);
   for(let i=0;i<24;i++)p.push({x:240-i*9,y:45+Math.sin(i*.55)*16});
-  drawW(c,p,11,skin);eyes(c,p[0],0,11);
+  drawW(c,p,11,skin,0,1,{s:1,e:0,f:0});head(c,p[0],0,11,skin);
 }
 function setImg(d){
   const im=new Image();
-  im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=40;c.getContext('2d').drawImage(im,0,0,40,40);tile=c;pv()};
+  im.onload=()=>{const sz=Math.min(128,im.width,im.height),c=document.createElement('canvas');c.width=c.height=sz;const x=c.getContext('2d');x.drawImage(im,0,0,sz,sz);tile=c;try{const a=document.createElement('canvas');a.width=a.height=1;const y=a.getContext('2d');y.drawImage(c,0,0,1,1);const d=y.getImageData(0,0,1,1).data;tileAvg=`rgb(${d[0]},${d[1]},${d[2]})`}catch{tileAvg='#888'}pv()};
   im.onerror=()=>{tile=null};
   im.src=d;
 }
@@ -506,8 +573,8 @@ $('#up').onchange=e=>{
   const u=URL.createObjectURL(f),im=new Image();
   im.onerror=()=>{URL.revokeObjectURL(u);skMsg('Gambar rusak atau tidak bisa dibaca.')};
   im.onload=()=>{
-    const s=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=64; // potong persegi dari tengah, diproses lokal
-    c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,64,64);URL.revokeObjectURL(u);
+    const s=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=128; // potong persegi dari tengah, diproses lokal
+    c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,128,128);URL.revokeObjectURL(u);
     const d=c.toDataURL('image/jpeg',.85);
     if(!ls.set('cg_skinimg',d))return skMsg('Penyimpanan browser penuh; gambar tidak tersimpan.');
     setImg(d);skin={...skin,img:1};saveSkin();skMsg('Skin gambar diterapkan.');
